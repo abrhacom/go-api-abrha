@@ -1,93 +1,199 @@
-# parspack-go-public-api-github
+# go-api-abrha
 
+[![GitHub Actions CI](https://github.com/abrhacom/go-api-abrha/actions/workflows/ci.yml/badge.svg)](https://github.com/abrhacom/go-api-abrha/actions/workflows/ci.yml)
+[![GoDoc](https://godoc.org/github.com/abrhacom/go-api-abrha?status.svg)](https://godoc.org/github.com/abrhacom/go-api-abrha)
 
+go-api-abrha is a Go client library for accessing the Abrha V1 API.
 
-## Getting started
+You can view the client API docs here: [http://godoc.org/github.com/abrhacom/go-api-abrha](http://godoc.org/github.com/abrhacom/go-api-abrha)
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+You can view Abrha API docs here: [https://docs.parspack.com/api/](https://docs.parspack.com/api/)
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
-
-## Add your files
-
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/ee/gitlab-basics/add-file.html#add-a-file-using-the-command-line) or push an existing Git repository with the following command:
-
-```
-cd existing_repo
-git remote add origin https://m2.bitcommand.com:4432/terraform/parspack-go-public-api-github.git
-git branch -M main
-git push -uf origin main
+## Install
+```sh
+go get github.com/abrhacom/go-api-abrha@vX.Y.Z
 ```
 
-## Integrate with your tools
+where X.Y.Z is the [version](https://github.com/abrhacom/go-api-abrha/releases) you need.
 
-- [ ] [Set up project integrations](https://m2.bitcommand.com:4432/terraform/parspack-go-public-api-github/-/settings/integrations)
-
-## Collaborate with your team
-
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Set auto-merge](https://docs.gitlab.com/ee/user/project/merge_requests/merge_when_pipeline_succeeds.html)
-
-## Test and Deploy
-
-Use the built-in continuous integration in GitLab.
-
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
-
-***
-
-# Editing this README
-
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
-
-## Suggestions for a good README
-
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
-
-## Name
-Choose a self-explaining name for your project.
-
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
-
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
-
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
-
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+or
+```sh
+go get github.com/abrhacom/go-api-abrha
+```
+for non Go modules usage or latest version.
 
 ## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+```go
+import "github.com/abrhacom/go-api-abrha"
+```
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+Create a new Abrha client, then use the exposed services to
+access different parts of the Abrha API.
+
+### Authentication
+
+Currently, Personal Access Token (PAT) is the only method of
+authenticating with the API. You can manage your tokens
+at the Abrha Control Panel.
+
+You can then use your token to create a new client:
+
+```go
+package main
+
+import (
+    goApiAbrha "github.com/abrhacom/go-api-abrha"
+)
+
+func main() {
+    client := goApiAbrha.NewFromToken("my-abrha-api-token")
+}
+```
+
+If you need to provide a `context.Context` to your new client, you should use [`goApiAbrha.NewClient`](https://godoc.org/github.com/abrhacom/go-api-abrha#NewClient#NewClient) to manually construct a client instead.
+
+## Examples
+
+
+To create a new Vm:
+
+```go
+vmName := "super-cool-vm"
+
+createRequest := &goApiAbrha.VmCreateRequest{
+    Name:   vmName,
+    Region: "nyc3",
+    Size:   "s-1vcpu-1gb",
+    Image: goApiAbrha.VmCreateImage{
+        Slug: "ubuntu-20-04-x64",
+    },
+}
+
+ctx := context.TODO()
+
+newVm, _, err := client.Vms.Create(ctx, createRequest)
+
+if err != nil {
+    fmt.Printf("Something bad happened: %s\n\n", err)
+    return err
+}
+```
+
+### Pagination
+
+If a list of items is paginated by the API, you must request pages individually. For example, to fetch all Vms:
+
+```go
+func VmList(ctx context.Context, client *goApiAbrha.Client) ([]goApiAbrha.Vm, error) {
+    // create a list to hold our vms
+    list := []goApiAbrha.Vm{}
+
+    // create options. initially, these will be blank
+    opt := &goApiAbrha.ListOptions{}
+    for {
+        vms, resp, err := client.Vms.List(ctx, opt)
+        if err != nil {
+            return nil, err
+        }
+
+        // append the current page's vms to our list
+        list = append(list, vms...)
+
+        // if we are at the last page, break out the for loop
+        if resp.Links == nil || resp.Links.IsLastPage() {
+            break
+        }
+
+        page, err := resp.Links.CurrentPage()
+        if err != nil {
+            return nil, err
+        }
+
+        // set the page we want for the next request
+        opt.Page = page + 1
+    }
+
+    return list, nil
+}
+```
+
+Some endpoints offer token based pagination. For example, to fetch all Registry Repositories:
+
+```go
+func ListRepositoriesV2(ctx context.Context, client *goApiAbrha.Client, registryName string) ([]*goApiAbrha.RepositoryV2, error) {
+    // create a list to hold our registries
+    list := []*goApiAbrha.RepositoryV2{}
+
+    // create options. initially, these will be blank
+    opt := &goApiAbrha.TokenListOptions{}
+    for {
+        repositories, resp, err := client.Registry.ListRepositoriesV2(ctx, registryName, opt)
+        if err != nil {
+            return nil, err
+        }
+
+        // append the current page's registries to our list
+        list = append(list, repositories...)
+
+        // if we are at the last page, break out the for loop
+        if resp.Links == nil || resp.Links.IsLastPage() {
+            break
+        }
+
+        // grab the next page token
+        nextPageToken, err := resp.Links.NextPageToken()
+        if err != nil {
+            return nil, err
+        }
+
+        // provide the next page token for the next request
+        opt.Token = nextPageToken
+    }
+
+    return list, nil
+}
+```
+
+### Automatic Retries and Exponential Backoff
+
+The go-api-abrha client can be configured to use automatic retries and exponentional backoff for requests that fail with 429 or 500-level response codes via [go-retryablehttp](https://github.com/hashicorp/go-retryablehttp). To configure go-api-abrha to enable usage of go-retryablehttp, the `RetryConfig.RetryMax` must be set.
+
+```go
+tokenSrc := oauth2.StaticTokenSource(&oauth2.Token{
+    AccessToken: "dop_v1_xxxxxx",
+})
+
+oauth_client := oauth2.NewClient(oauth2.NoContext, tokenSrc)
+
+waitMax := goApiAbrha.PtrTo(6.0)
+waitMin := goApiAbrha.PtrTo(3.0)
+
+retryConfig := goApiAbrha.RetryConfig{
+    RetryMax:     3,
+    RetryWaitMin: waitMin,
+    RetryWaitMax: waitMax,
+}
+
+client, err := goApiAbrha.New(oauth_client, goApiAbrha.WithRetryAndBackoffs(retryConfig))
+```
+
+Please refer to the [RetryConfig go-api-abrha documentation](https://pkg.go.dev/github.com/abrhacom/go-api-abrha#RetryConfig) for more information.
+
+## Versioning
+
+Each version of the client is tagged and the version is updated accordingly.
+
+To see the list of past versions, run `git tag`.
+
+
+## Documentation
+
+For a comprehensive list of examples, check out the [API documentation](https://docs.parspack.com/api/#tag/SSH-Keys).
+
+For details on all the functionality in this library, see the [GoDoc](https://godoc.org/github.com/abrhacom/go-api-abrha) documentation.
+
 
 ## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
-
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
-
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
-
-## License
-For open source projects, say how it is licensed.
-
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+We love pull requests! Please see the [contribution guidelines](CONTRIBUTING.md).

@@ -1,0 +1,849 @@
+package go_api_abrha
+
+import (
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"path"
+	"reflect"
+	"testing"
+)
+
+var (
+	firewallCreateJSONBody = `
+{
+  "name": "f-i-r-e-w-a-l-l",
+  "inbound_rules": [
+    {
+      "protocol": "icmp",
+      "sources": {
+        "addresses": ["0.0.0.0/0"],
+        "tags": ["frontend"],
+        "vm_ids": ["123", "456"],
+        "load_balancer_uids": ["lb-uid"],
+        "kubernetes_ids": ["doks-01", "doks-02"]
+      }
+    },
+    {
+      "protocol": "tcp",
+      "ports": "8000-9000",
+      "sources": {
+        "addresses": ["0.0.0.0/0"]
+      }
+    }
+  ],
+  "outbound_rules": [
+    {
+      "protocol": "icmp",
+      "destinations": {
+        "tags": ["frontend"]
+      }
+    },
+    {
+      "protocol": "tcp",
+      "ports": "8000-9000",
+      "destinations": {
+        "addresses": ["::/1"]
+      }
+    }
+  ],
+  "vm_ids": ["123"],
+  "tags": ["frontend"]
+}
+`
+	firewallRulesJSONBody = `
+{
+  "inbound_rules": [
+    {
+      "protocol": "tcp",
+      "ports": "22",
+      "sources": {
+        "addresses": ["0.0.0.0/0"]
+      }
+    }
+  ],
+  "outbound_rules": [
+    {
+      "protocol": "tcp",
+      "ports": "443",
+      "destinations": {
+        "addresses": ["0.0.0.0/0"]
+      }
+    }
+  ]
+}
+`
+	firewallUpdateJSONBody = `
+{
+  "name": "f-i-r-e-w-a-l-l",
+  "inbound_rules": [
+    {
+      "protocol": "tcp",
+      "ports": "443",
+      "sources": {
+        "addresses": ["10.0.0.0/8"]
+      }
+    }
+  ],
+  "vm_ids": ["123"],
+  "tags": []
+}
+`
+	firewallUpdateJSONResponse = `
+{
+  "firewall": {
+    "id": "fe6b88f2-b42b-4bf7-bbd3-5ae20208f0b0",
+    "name": "f-i-r-e-w-a-l-l",
+    "inbound_rules": [
+      {
+        "protocol": "tcp",
+        "ports": "443",
+        "sources": {
+          "addresses": ["10.0.0.0/8"]
+        }
+      }
+    ],
+    "outbound_rules": [],
+    "created_at": "2017-04-06T13:07:27Z",
+    "vm_ids": [
+      "123"
+    ],
+    "tags": []
+  }
+}
+`
+	firewallJSONResponse = `
+{
+  "firewall": {
+    "id": "fe6b88f2-b42b-4bf7-bbd3-5ae20208f0b0",
+    "name": "f-i-r-e-w-a-l-l",
+    "status": "waiting",
+    "inbound_rules": [
+      {
+        "protocol": "icmp",
+        "ports": "0",
+        "sources": {
+          "tags": ["frontend"]
+        }
+      },
+      {
+        "protocol": "tcp",
+        "ports": "8000-9000",
+        "sources": {
+          "addresses": ["0.0.0.0/0"]
+        }
+      }
+    ],
+    "outbound_rules": [
+      {
+        "protocol": "icmp",
+        "ports": "0"
+      },
+      {
+        "protocol": "tcp",
+        "ports": "8000-9000",
+        "destinations": {
+          "addresses": ["::/1"]
+        }
+      }
+    ],
+    "created_at": "2017-04-06T13:07:27Z",
+    "vm_ids": [
+      "123"
+    ],
+    "tags": [
+      "frontend"
+    ],
+    "pending_changes": [
+      {
+        "vm_id": "123",
+        "removing": false,
+        "status": "waiting"
+      }
+    ]
+  }
+}
+`
+	firewallListJSONResponse = `
+{
+  "firewalls": [
+    {
+      "id": "fe6b88f2-b42b-4bf7-bbd3-5ae20208f0b0",
+      "name": "f-i-r-e-w-a-l-l",
+      "inbound_rules": [
+        {
+          "protocol": "icmp",
+          "ports": "0",
+          "sources": {
+            "tags": ["frontend"]
+          }
+        },
+        {
+          "protocol": "tcp",
+          "ports": "8000-9000",
+          "sources": {
+            "addresses": ["0.0.0.0/0"]
+          }
+        }
+      ],
+      "outbound_rules": [
+        {
+          "protocol": "icmp",
+          "ports": "0"
+        },
+        {
+          "protocol": "tcp",
+          "ports": "8000-9000",
+          "destinations": {
+            "addresses": ["::/1"]
+          }
+        }
+      ],
+      "created_at": "2017-04-06T13:07:27Z",
+      "vm_ids": [
+        "123"
+      ],
+      "tags": [
+        "frontend"
+      ]
+    }
+  ],
+  "links": {},
+  "meta": {
+    "total": 1
+  }
+}
+`
+)
+
+func TestFirewalls_Get(t *testing.T) {
+	setup()
+	defer teardown()
+
+	urlStr := "/api/public/v1/firewalls"
+	fID := "fe6b88f2-b42b-4bf7-bbd3-5ae20208f0b0"
+	urlStr = path.Join(urlStr, fID)
+
+	mux.HandleFunc(urlStr, func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, http.MethodGet)
+		fmt.Fprint(w, firewallJSONResponse)
+	})
+
+	actualFirewall, _, err := client.Firewalls.Get(ctx, fID)
+	if err != nil {
+		t.Errorf("Firewalls.Get returned error: %v", err)
+	}
+
+	expectedFirewall := &Firewall{
+		ID:     "fe6b88f2-b42b-4bf7-bbd3-5ae20208f0b0",
+		Name:   "f-i-r-e-w-a-l-l",
+		Status: "waiting",
+		InboundRules: []InboundRule{
+			{
+				Protocol:  "icmp",
+				PortRange: "0",
+				Sources: &Sources{
+					Tags: []string{"frontend"},
+				},
+			},
+			{
+				Protocol:  "tcp",
+				PortRange: "8000-9000",
+				Sources: &Sources{
+					Addresses: []string{"0.0.0.0/0"},
+				},
+			},
+		},
+		OutboundRules: []OutboundRule{
+			{
+				Protocol:  "icmp",
+				PortRange: "0",
+			},
+			{
+				Protocol:  "tcp",
+				PortRange: "8000-9000",
+				Destinations: &Destinations{
+					Addresses: []string{"::/1"},
+				},
+			},
+		},
+		Created: "2017-04-06T13:07:27Z",
+		VmIDs:   []string{"123"},
+		Tags:    []string{"frontend"},
+		PendingChanges: []PendingChange{
+			{
+				VmID:     "123",
+				Removing: false,
+				Status:   "waiting",
+			},
+		},
+	}
+
+	if !reflect.DeepEqual(actualFirewall, expectedFirewall) {
+		t.Errorf("Firewalls.Get returned %+v, expected %+v", actualFirewall, expectedFirewall)
+	}
+}
+
+func TestFirewalls_Create(t *testing.T) {
+	setup()
+	defer teardown()
+
+	expectedFirewallRequest := &FirewallRequest{
+		Name: "f-i-r-e-w-a-l-l",
+		InboundRules: []InboundRule{
+			{
+				Protocol: "icmp",
+				Sources: &Sources{
+					Addresses:        []string{"0.0.0.0/0"},
+					Tags:             []string{"frontend"},
+					VmIDs:            []string{"123", "456"},
+					LoadBalancerUIDs: []string{"lb-uid"},
+					KubernetesIDs:    []string{"doks-01", "doks-02"},
+				},
+			},
+			{
+				Protocol:  "tcp",
+				PortRange: "8000-9000",
+				Sources: &Sources{
+					Addresses: []string{"0.0.0.0/0"},
+				},
+			},
+		},
+		OutboundRules: []OutboundRule{
+			{
+				Protocol: "icmp",
+				Destinations: &Destinations{
+					Tags: []string{"frontend"},
+				},
+			},
+			{
+				Protocol:  "tcp",
+				PortRange: "8000-9000",
+				Destinations: &Destinations{
+					Addresses: []string{"::/1"},
+				},
+			},
+		},
+		VmIDs: []string{"123"},
+		Tags:  []string{"frontend"},
+	}
+
+	mux.HandleFunc("/api/public/v1/firewalls", func(w http.ResponseWriter, r *http.Request) {
+		v := new(FirewallRequest)
+		err := json.NewDecoder(r.Body).Decode(v)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		testMethod(t, r, http.MethodPost)
+		if !reflect.DeepEqual(v, expectedFirewallRequest) {
+			t.Errorf("Request body = %+v, expected %+v", v, expectedFirewallRequest)
+		}
+
+		var actualFirewallRequest *FirewallRequest
+		json.Unmarshal([]byte(firewallCreateJSONBody), &actualFirewallRequest)
+		if !reflect.DeepEqual(actualFirewallRequest, expectedFirewallRequest) {
+			t.Errorf("Request body = %+v, expected %+v", actualFirewallRequest, expectedFirewallRequest)
+		}
+
+		fmt.Fprint(w, firewallJSONResponse)
+	})
+
+	actualFirewall, _, err := client.Firewalls.Create(ctx, expectedFirewallRequest)
+	if err != nil {
+		t.Errorf("Firewalls.Create returned error: %v", err)
+	}
+
+	expectedFirewall := &Firewall{
+		ID:     "fe6b88f2-b42b-4bf7-bbd3-5ae20208f0b0",
+		Name:   "f-i-r-e-w-a-l-l",
+		Status: "waiting",
+		InboundRules: []InboundRule{
+			{
+				Protocol:  "icmp",
+				PortRange: "0",
+				Sources: &Sources{
+					Tags: []string{"frontend"},
+				},
+			},
+			{
+				Protocol:  "tcp",
+				PortRange: "8000-9000",
+				Sources: &Sources{
+					Addresses: []string{"0.0.0.0/0"},
+				},
+			},
+		},
+		OutboundRules: []OutboundRule{
+			{
+				Protocol:  "icmp",
+				PortRange: "0",
+			},
+			{
+				Protocol:  "tcp",
+				PortRange: "8000-9000",
+				Destinations: &Destinations{
+					Addresses: []string{"::/1"},
+				},
+			},
+		},
+		Created: "2017-04-06T13:07:27Z",
+		VmIDs:   []string{"123"},
+		Tags:    []string{"frontend"},
+		PendingChanges: []PendingChange{
+			{
+				VmID:     "123",
+				Removing: false,
+				Status:   "waiting",
+			},
+		},
+	}
+
+	if !reflect.DeepEqual(actualFirewall, expectedFirewall) {
+		t.Errorf("Firewalls.Create returned %+v, expected %+v", actualFirewall, expectedFirewall)
+	}
+}
+
+func TestFirewalls_Update(t *testing.T) {
+	setup()
+	defer teardown()
+
+	expectedFirewallRequest := &FirewallRequest{
+		Name: "f-i-r-e-w-a-l-l",
+		InboundRules: []InboundRule{
+			{
+				Protocol:  "tcp",
+				PortRange: "443",
+				Sources: &Sources{
+					Addresses: []string{"10.0.0.0/8"},
+				},
+			},
+		},
+		VmIDs: []string{"123"},
+		Tags:  []string{},
+	}
+
+	urlStr := "/api/public/v1/firewalls"
+	fID := "fe6b88f2-b42b-4bf7-bbd3-5ae20208f0b0"
+	urlStr = path.Join(urlStr, fID)
+	mux.HandleFunc(urlStr, func(w http.ResponseWriter, r *http.Request) {
+		v := new(FirewallRequest)
+		err := json.NewDecoder(r.Body).Decode(v)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		testMethod(t, r, "PUT")
+		if !reflect.DeepEqual(v, expectedFirewallRequest) {
+			t.Errorf("Request body = %+v, expected %+v", v, expectedFirewallRequest)
+		}
+
+		var actualFirewallRequest *FirewallRequest
+		json.Unmarshal([]byte(firewallUpdateJSONBody), &actualFirewallRequest)
+		if !reflect.DeepEqual(actualFirewallRequest, expectedFirewallRequest) {
+			t.Errorf("Request body = %+v, expected %+v", actualFirewallRequest, expectedFirewallRequest)
+		}
+
+		fmt.Fprint(w, firewallUpdateJSONResponse)
+	})
+
+	actualFirewall, _, err := client.Firewalls.Update(ctx, fID, expectedFirewallRequest)
+	if err != nil {
+		t.Errorf("Firewalls.Update returned error: %v", err)
+	}
+
+	expectedFirewall := &Firewall{
+		ID:   "fe6b88f2-b42b-4bf7-bbd3-5ae20208f0b0",
+		Name: "f-i-r-e-w-a-l-l",
+		InboundRules: []InboundRule{
+			{
+				Protocol:  "tcp",
+				PortRange: "443",
+				Sources: &Sources{
+					Addresses: []string{"10.0.0.0/8"},
+				},
+			},
+		},
+		OutboundRules: []OutboundRule{},
+		Created:       "2017-04-06T13:07:27Z",
+		VmIDs:         []string{"123"},
+		Tags:          []string{},
+	}
+
+	if !reflect.DeepEqual(actualFirewall, expectedFirewall) {
+		t.Errorf("Firewalls.Update returned %+v, expected %+v", actualFirewall, expectedFirewall)
+	}
+}
+
+func TestFirewalls_Delete(t *testing.T) {
+	setup()
+	defer teardown()
+
+	urlStr := "/api/public/v1/firewalls"
+	fID := "fe6b88f2-b42b-4bf7-bbd3-5ae20208f0b0"
+	urlStr = path.Join(urlStr, fID)
+	mux.HandleFunc(urlStr, func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, http.MethodDelete)
+	})
+
+	_, err := client.Firewalls.Delete(ctx, fID)
+
+	if err != nil {
+		t.Errorf("Firewalls.Delete returned error: %v", err)
+	}
+}
+
+func TestFirewalls_List(t *testing.T) {
+	setup()
+	defer teardown()
+
+	mux.HandleFunc("/api/public/v1/firewalls", func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, http.MethodGet)
+		fmt.Fprint(w, firewallListJSONResponse)
+	})
+
+	actualFirewalls, resp, err := client.Firewalls.List(ctx, nil)
+
+	if err != nil {
+		t.Errorf("Firewalls.List returned error: %v", err)
+	}
+
+	expectedFirewalls := makeExpectedFirewalls()
+	if !reflect.DeepEqual(actualFirewalls, expectedFirewalls) {
+		t.Errorf("Firewalls.List returned firewalls %+v, expected %+v", actualFirewalls, expectedFirewalls)
+	}
+	expectedMeta := &Meta{Total: 1}
+	if !reflect.DeepEqual(resp.Meta, expectedMeta) {
+		t.Errorf("Firewalls.List returned meta %+v, expected %+v", resp.Meta, expectedMeta)
+	}
+}
+
+func TestFirewalls_ListByVm(t *testing.T) {
+	setup()
+	defer teardown()
+
+	mux.HandleFunc("/api/public/v1/vms/123/firewalls", func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, http.MethodGet)
+		fmt.Fprint(w, firewallListJSONResponse)
+	})
+
+	actualFirewalls, resp, err := client.Firewalls.ListByVm(ctx, 123, nil)
+
+	if err != nil {
+		t.Errorf("Firewalls.List returned error: %v", err)
+	}
+
+	expectedFirewalls := makeExpectedFirewalls()
+	if !reflect.DeepEqual(actualFirewalls, expectedFirewalls) {
+		t.Errorf("Firewalls.List returned firewalls %+v, expected %+v", actualFirewalls, expectedFirewalls)
+	}
+	expectedMeta := &Meta{Total: 1}
+	if !reflect.DeepEqual(resp.Meta, expectedMeta) {
+		t.Errorf("Firewalls.List returned meta %+v, expected %+v", resp.Meta, expectedMeta)
+	}
+}
+
+func TestFirewalls_AddVms(t *testing.T) {
+	setup()
+	defer teardown()
+
+	dRequest := &vmsRequest{
+		IDs: []string{"123"},
+	}
+
+	fID := "fe6b88f2-b42b-4bf7-bbd3-5ae20208f0b0"
+	urlStr := path.Join("/api/public/v1/firewalls", fID, "vms")
+	mux.HandleFunc(urlStr, func(w http.ResponseWriter, r *http.Request) {
+		v := new(vmsRequest)
+		err := json.NewDecoder(r.Body).Decode(v)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		testMethod(t, r, http.MethodPost)
+		if !reflect.DeepEqual(v, dRequest) {
+			t.Errorf("Request body = %+v, expected %+v", v, dRequest)
+		}
+
+		expectedJSONBody := `{"vm_ids": ["123"]}`
+		var actualVmsRequest *vmsRequest
+		json.Unmarshal([]byte(expectedJSONBody), &actualVmsRequest)
+		if !reflect.DeepEqual(actualVmsRequest, dRequest) {
+			t.Errorf("Request body = %+v, expected %+v", actualVmsRequest, dRequest)
+		}
+
+		fmt.Fprint(w, nil)
+	})
+
+	_, err := client.Firewalls.AddVms(ctx, fID, dRequest.IDs...)
+
+	if err != nil {
+		t.Errorf("Firewalls.AddVms returned error: %v", err)
+	}
+}
+
+func TestFirewalls_RemoveVms(t *testing.T) {
+	setup()
+	defer teardown()
+
+	dRequest := &vmsRequest{
+		IDs: []string{"123", "345"},
+	}
+
+	fID := "fe6b88f2-b42b-4bf7-bbd3-5ae20208f0b0"
+	urlStr := path.Join("/api/public/v1/firewalls", fID, "vms")
+	mux.HandleFunc(urlStr, func(w http.ResponseWriter, r *http.Request) {
+		v := new(vmsRequest)
+		err := json.NewDecoder(r.Body).Decode(v)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		testMethod(t, r, http.MethodDelete)
+		if !reflect.DeepEqual(v, dRequest) {
+			t.Errorf("Request body = %+v, expected %+v", v, dRequest)
+		}
+
+		expectedJSONBody := `{"vm_ids": ["123", "345"]}`
+		var actualVmsRequest *vmsRequest
+		json.Unmarshal([]byte(expectedJSONBody), &actualVmsRequest)
+		if !reflect.DeepEqual(actualVmsRequest, dRequest) {
+			t.Errorf("Request body = %+v, expected %+v", actualVmsRequest, dRequest)
+		}
+
+		fmt.Fprint(w, nil)
+	})
+
+	_, err := client.Firewalls.RemoveVms(ctx, fID, dRequest.IDs...)
+
+	if err != nil {
+		t.Errorf("Firewalls.RemoveVms returned error: %v", err)
+	}
+}
+
+func TestFirewalls_AddTags(t *testing.T) {
+	setup()
+	defer teardown()
+
+	tRequest := &tagsRequest{
+		Tags: []string{"frontend"},
+	}
+
+	fID := "fe6b88f2-b42b-4bf7-bbd3-5ae20208f0b0"
+	urlStr := path.Join("/api/public/v1/firewalls", fID, "tags")
+	mux.HandleFunc(urlStr, func(w http.ResponseWriter, r *http.Request) {
+		v := new(tagsRequest)
+		err := json.NewDecoder(r.Body).Decode(v)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		testMethod(t, r, http.MethodPost)
+		if !reflect.DeepEqual(v, tRequest) {
+			t.Errorf("Request body = %+v, expected %+v", v, tRequest)
+		}
+
+		var actualTagsRequest *tagsRequest
+		json.Unmarshal([]byte(`{"tags": ["frontend"]}`), &actualTagsRequest)
+		if !reflect.DeepEqual(actualTagsRequest, tRequest) {
+			t.Errorf("Request body = %+v, expected %+v", actualTagsRequest, tRequest)
+		}
+
+		fmt.Fprint(w, nil)
+	})
+
+	_, err := client.Firewalls.AddTags(ctx, fID, tRequest.Tags...)
+
+	if err != nil {
+		t.Errorf("Firewalls.AddTags returned error: %v", err)
+	}
+}
+
+func TestFirewalls_RemoveTags(t *testing.T) {
+	setup()
+	defer teardown()
+
+	tRequest := &tagsRequest{
+		Tags: []string{"frontend", "backend"},
+	}
+
+	fID := "fe6b88f2-b42b-4bf7-bbd3-5ae20208f0b0"
+	urlStr := path.Join("/api/public/v1/firewalls", fID, "tags")
+	mux.HandleFunc(urlStr, func(w http.ResponseWriter, r *http.Request) {
+		v := new(tagsRequest)
+		err := json.NewDecoder(r.Body).Decode(v)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		testMethod(t, r, http.MethodDelete)
+		if !reflect.DeepEqual(v, tRequest) {
+			t.Errorf("Request body = %+v, expected %+v", v, tRequest)
+		}
+
+		var actualTagsRequest *tagsRequest
+		json.Unmarshal([]byte(`{"tags": ["frontend", "backend"]}`), &actualTagsRequest)
+		if !reflect.DeepEqual(actualTagsRequest, tRequest) {
+			t.Errorf("Request body = %+v, expected %+v", actualTagsRequest, tRequest)
+		}
+
+		fmt.Fprint(w, nil)
+	})
+
+	_, err := client.Firewalls.RemoveTags(ctx, fID, tRequest.Tags...)
+
+	if err != nil {
+		t.Errorf("Firewalls.RemoveTags returned error: %v", err)
+	}
+}
+
+func TestFirewalls_AddRules(t *testing.T) {
+	setup()
+	defer teardown()
+
+	rr := &FirewallRulesRequest{
+		InboundRules: []InboundRule{
+			{
+				Protocol:  "tcp",
+				PortRange: "22",
+				Sources: &Sources{
+					Addresses: []string{"0.0.0.0/0"},
+				},
+			},
+		},
+		OutboundRules: []OutboundRule{
+			{
+				Protocol:  "tcp",
+				PortRange: "443",
+				Destinations: &Destinations{
+					Addresses: []string{"0.0.0.0/0"},
+				},
+			},
+		},
+	}
+
+	fID := "fe6b88f2-b42b-4bf7-bbd3-5ae20208f0b0"
+	urlStr := path.Join("/api/public/v1/firewalls", fID, "rules")
+	mux.HandleFunc(urlStr, func(w http.ResponseWriter, r *http.Request) {
+		v := new(FirewallRulesRequest)
+		err := json.NewDecoder(r.Body).Decode(v)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		testMethod(t, r, http.MethodPost)
+		if !reflect.DeepEqual(v, rr) {
+			t.Errorf("Request body = %+v, expected %+v", v, rr)
+		}
+
+		var actualFirewallRulesRequest *FirewallRulesRequest
+		json.Unmarshal([]byte(firewallRulesJSONBody), &actualFirewallRulesRequest)
+		if !reflect.DeepEqual(actualFirewallRulesRequest, rr) {
+			t.Errorf("Request body = %+v, expected %+v", actualFirewallRulesRequest, rr)
+		}
+
+		fmt.Fprint(w, nil)
+	})
+
+	_, err := client.Firewalls.AddRules(ctx, fID, rr)
+
+	if err != nil {
+		t.Errorf("Firewalls.AddRules returned error: %v", err)
+	}
+}
+
+func TestFirewalls_RemoveRules(t *testing.T) {
+	setup()
+	defer teardown()
+
+	rr := &FirewallRulesRequest{
+		InboundRules: []InboundRule{
+			{
+				Protocol:  "tcp",
+				PortRange: "22",
+				Sources: &Sources{
+					Addresses: []string{"0.0.0.0/0"},
+				},
+			},
+		},
+		OutboundRules: []OutboundRule{
+			{
+				Protocol:  "tcp",
+				PortRange: "443",
+				Destinations: &Destinations{
+					Addresses: []string{"0.0.0.0/0"},
+				},
+			},
+		},
+	}
+
+	fID := "fe6b88f2-b42b-4bf7-bbd3-5ae20208f0b0"
+	urlStr := path.Join("/api/public/v1/firewalls", fID, "rules")
+	mux.HandleFunc(urlStr, func(w http.ResponseWriter, r *http.Request) {
+		v := new(FirewallRulesRequest)
+		err := json.NewDecoder(r.Body).Decode(v)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		testMethod(t, r, http.MethodDelete)
+		if !reflect.DeepEqual(v, rr) {
+			t.Errorf("Request body = %+v, expected %+v", v, rr)
+		}
+
+		var actualFirewallRulesRequest *FirewallRulesRequest
+		json.Unmarshal([]byte(firewallRulesJSONBody), &actualFirewallRulesRequest)
+		if !reflect.DeepEqual(actualFirewallRulesRequest, rr) {
+			t.Errorf("Request body = %+v, expected %+v", actualFirewallRulesRequest, rr)
+		}
+
+		fmt.Fprint(w, nil)
+	})
+
+	_, err := client.Firewalls.RemoveRules(ctx, fID, rr)
+
+	if err != nil {
+		t.Errorf("Firewalls.RemoveRules returned error: %v", err)
+	}
+}
+
+func makeExpectedFirewalls() []Firewall {
+	return []Firewall{
+		{
+			ID:   "fe6b88f2-b42b-4bf7-bbd3-5ae20208f0b0",
+			Name: "f-i-r-e-w-a-l-l",
+			InboundRules: []InboundRule{
+				{
+					Protocol:  "icmp",
+					PortRange: "0",
+					Sources: &Sources{
+						Tags: []string{"frontend"},
+					},
+				},
+				{
+					Protocol:  "tcp",
+					PortRange: "8000-9000",
+					Sources: &Sources{
+						Addresses: []string{"0.0.0.0/0"},
+					},
+				},
+			},
+			OutboundRules: []OutboundRule{
+				{
+					Protocol:  "icmp",
+					PortRange: "0",
+				},
+				{
+					Protocol:  "tcp",
+					PortRange: "8000-9000",
+					Destinations: &Destinations{
+						Addresses: []string{"::/1"},
+					},
+				},
+			},
+			VmIDs:   []string{"123"},
+			Tags:    []string{"frontend"},
+			Created: "2017-04-06T13:07:27Z",
+		},
+	}
+}
