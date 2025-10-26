@@ -25,7 +25,7 @@ const (
 )
 
 // LoadBalancersService is an interface for managing load balancers with the Abrha API.
-// See: https://docs.parspack.com/reference/api/#tag/Load-Balancers
+// See: https://docs.parspack.com/reference/api/cloud-server/#tag/Load-Balancers
 type LoadBalancersService interface {
 	Get(context.Context, string) (*LoadBalancer, *Response, error)
 	List(context.Context, *ListOptions) ([]LoadBalancer, *Response, error)
